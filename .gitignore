@@ -1,0 +1,11 @@
+# Byte-compiled / optimized / __pycache__ folders
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyCharm / VS Code settings
+.idea/
+.vscode/
+
+# 🚨 Secure Credentials
+.env

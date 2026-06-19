@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 load_dotenv()
 
 def is_tomorrow_sunday():
-    # website will take out sunday and date if today is sat,this is for returning 'tomorrow' text for searching
+    # website will not show "sunday" and date if today is sat,this is for returning 'tomorrow' text for searching
     today = datetime.today()
     return 5 == today.weekday()
         
@@ -52,18 +52,16 @@ def login(wait,driver,MY_EMAIL,MY_PASSWORD):
     password.send_keys(MY_PASSWORD)
     login_button = driver.find_element(By.CSS_SELECTOR,value="button[id^='login-submit']")
     login_button.click()
-    # timeout counter 123
     clear_filter = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,"button[id^='reset-filters']")))
     print("--------------------")
     print("Login successfully")
     
 def provide_filter(wait,driver):
     print("--------------------")
-    print("Trying to provide filter.")
-    # auto type in filter
+    print("Providing filter.")
+    # auto choose filter
     activity = driver.find_element(By.CSS_SELECTOR,value="input[id='activityIds']")
     activity.send_keys(ACTIVITY)
-    # timeoutexception happen here counter 1
     activity_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Courts & Pitches')]")))
     activity_button.click()
 
@@ -78,7 +76,6 @@ def provide_filter(wait,driver):
     search_court.click()
     print("--------------------")
     print("Searching with filter")
-    # timeout 12
     wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR,"h2[class^='activity-search__search-results-']")))
     
 def search_availability(wait,driver):
@@ -104,7 +101,6 @@ def search_availability(wait,driver):
         if LOCATION in activity.text and "Tennis Court Bookings" in activity.text:
             search_availability_button = activity.find_element(By.CSS_SELECTOR,value="button[id^='view-activity']")
             search_availability_button.click()
-    # timeout here counter 1
     wait.until(EC.presence_of_element_located((By.CSS_SELECTOR,"h2[class^='activity-calendar']")))
     print("--------------------")
     print("Tennis court option chose")
@@ -113,7 +109,7 @@ def get_court_name(targer_court_number):
     # return court number as str
     return f"Court {targer_court_number}"
 def find_available_slots(target_court):
-    # check if the time in TARGET_TIME and court in target court are both free
+    # check if both of the time in TARGET_TIME and court in target court are both free
 
     all_result = []
     for each_time in TARGET_START_TIME:
@@ -145,10 +141,8 @@ def add_court_to_basket(wait,driver,list_of_elements):
     # no such elements if its not ava
             booking_court_button = element.find_element(By.CSS_SELECTOR,value="button[id^='book-slot-']")
             booking_court_button.click()
-    # time out counter 12
             add_to_basket_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,"button[id^='add-to-basket']")))
             add_to_basket_button.click()
-    # timeout 123456
             wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR,"button[id='added-to-basket-btn']")))
             close_button = driver.find_element(By.CSS_SELECTOR,value="button[id='close-activity-in-basket-slot-btn']")
             close_button.click()
@@ -157,7 +151,7 @@ def add_court_to_basket(wait,driver,list_of_elements):
             print("✅ Count have been added to basket")
             
 def check_basket_data(wait,driver):
-    # TODO  Future upgrade: data from web may not stable,may change to in to compare
+    # TODO  Future upgrade: data from web may not stable,may change to "in" to compare
     basket_page = driver.find_element(By.CSS_SELECTOR,value="a[href='/book/basket']")
     basket_page.click()
     wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,"button[id='continue-to-payment-btn']")))
@@ -194,7 +188,6 @@ def process_payment(wait,driver,MY_CARD,EXPIRY_DAY,CVV):
     payment_button = driver.find_element(By.CSS_SELECTOR,value="button[id='continue-to-payment-btn']")
     payment_button.click()
     
-    # timeout courter 1234
     iframe = wait.until(EC.presence_of_element_located((By.ID, "hostedfield-frame-1")))
     driver.switch_to.frame(iframe)
     print("--------------------")
@@ -364,6 +357,7 @@ while TARGET_COURT_NUMBER >=1:
         TARGET_COURT_NUMBER -= 1
         
 if TARGET_COURT_NUMBER <= 0:
+    # if all 4 court are full
     print("All courts are full. Maybe next week")
 else:
     expectation = expected_data(TARGET_START_TIME,TARGET_END_TIME,TARGET_COURT_NUMBER,LOCATION,CLOSEST_SUNDAY)

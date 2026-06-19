@@ -51,7 +51,7 @@ This script requires **Selenium** for browser automation and **python-dotenv** t
 
 ```bash pip3 install selenium python-dotenv```
 
-###2. Configure Your Environment Variables (.env)
+### 2. Configure Your Environment Variables (.env)
   Create a new file named .env in the root directory of this project.
   Open the file with any text editor and fill in your details using the exact format below:
 EMAIL=your_glasgow_club_email@example.com
@@ -61,7 +61,7 @@ EXPIRY_DAY=MMYY
 CVV=123
 Note: The .env file is included in .gitignore and will never be pushed to GitHub, ensuring your payment and login details remain 100% private and safe.
 
-###3. Run the script
+### 3. Run the script
 ```python3 tennis_bot_sunday.py```
 
 ## 🔮 Planned Future Upgrades (Roadmap)

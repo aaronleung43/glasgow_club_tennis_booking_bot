@@ -6,16 +6,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import os
 from dotenv import load_dotenv
-import time
 from datetime import datetime, timedelta
 load_dotenv()
 
 def is_tomorrow_sunday():
-    # website will not show "sunday" and date if today is sat,this is for returning 'tomorrow' text for searching
+    # website will take out sunday and date if today is sat,this is for returning 'tomorrow' text for searching
     today = datetime.today()
     return 5 == today.weekday()
         
-
 def closest_sunday():
     # weekday from 0 -6,adjust here and constant TARGET_DAY to book different weekday 
     today = datetime.today()
@@ -24,7 +22,9 @@ def closest_sunday():
     if days_til_sunday ==0:
         days_til_sunday = 7
     sunday = today + timedelta(days=days_til_sunday)
-    return sunday.strftime(f"{sunday.day} %B %Y")
+    sunday_in_format = sunday.strftime(f"{sunday.day} %B %Y")
+    print(f"Closest date is {sunday_in_format}")
+    return sunday_in_format
 
 def accept_cookies():
     # try to accept cookie when it exist
@@ -52,14 +52,15 @@ def login(wait,driver,MY_EMAIL,MY_PASSWORD):
     password.send_keys(MY_PASSWORD)
     login_button = driver.find_element(By.CSS_SELECTOR,value="button[id^='login-submit']")
     login_button.click()
+    # timeout counter 123
     clear_filter = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,"button[id^='reset-filters']")))
     print("--------------------")
     print("Login successfully")
     
 def provide_filter(wait,driver):
     print("--------------------")
-    print("Providing filter.")
-    # auto choose filter
+    print("Trying to provide filter.")
+    # auto type in filter
     activity = driver.find_element(By.CSS_SELECTOR,value="input[id='activityIds']")
     activity.send_keys(ACTIVITY)
     activity_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Courts & Pitches')]")))
@@ -85,6 +86,7 @@ def search_availability(wait,driver):
     all_days = driver.find_elements(By.CSS_SELECTOR,value="h2[class^='activity-search__search-results-']")
     for day in all_days:
         if is_tomorrow_sunday():
+            print("Tomorrow is Sunday, searching for 'Tomorrow' in text")
             if "Tomorrow" == day.text:
                 first_sunday = day
                 break
@@ -97,20 +99,23 @@ def search_availability(wait,driver):
     all_activity = first_sunday_parent.find_elements(By.TAG_NAME,value="li")
     print("--------------------")
     print("Searching for tennis court booking option.")
-    for activity in all_activity:
-        if LOCATION in activity.text and "Tennis Court Bookings" in activity.text:
-            search_availability_button = activity.find_element(By.CSS_SELECTOR,value="button[id^='view-activity']")
-            search_availability_button.click()
-    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR,"h2[class^='activity-calendar']")))
-    print("--------------------")
-    print("Tennis court option chose")
+    if all_activity:
+        for activity in all_activity:
+            if LOCATION in activity.text and "Tennis Court Bookings" in activity.text:
+                search_availability_button = activity.find_element(By.CSS_SELECTOR,value="button[id^='view-activity']")
+                search_availability_button.click()
+                break
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR,"h2[class^='activity-calendar']")))
+        print("--------------------")
+        print("Tennis court option chose")
+    else:
+        print("No activity found")
 
 def get_court_name(targer_court_number):
     # return court number as str
     return f"Court {targer_court_number}"
 def find_available_slots(target_court):
-    # check if both of the time in TARGET_TIME and court in target court are both free
-
+    # check if the time in TARGET_TIME and court in target court are both free
     all_result = []
     for each_time in TARGET_START_TIME:
         print("--------------------")
@@ -138,11 +143,12 @@ def add_court_to_basket(wait,driver,list_of_elements):
     print("--------------------")
     print("Adding court to basketball")
     for element in list_of_elements:
-    # no such elements if its not ava
             booking_court_button = element.find_element(By.CSS_SELECTOR,value="button[id^='book-slot-']")
             booking_court_button.click()
+
             add_to_basket_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,"button[id^='add-to-basket']")))
             add_to_basket_button.click()
+
             wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR,"button[id='added-to-basket-btn']")))
             close_button = driver.find_element(By.CSS_SELECTOR,value="button[id='close-activity-in-basket-slot-btn']")
             close_button.click()
@@ -150,8 +156,13 @@ def add_court_to_basket(wait,driver,list_of_elements):
             print("--------------------")
             print("✅ Count have been added to basket")
             
+def clean_court_name(court_str):
+    cleaned = court_str.lower().strip()
+    cleaned = cleaned.replace("tennis hall court", "tennis court")
+    cleaned = " ".join(cleaned.split())
+    return cleaned
 def check_basket_data(wait,driver):
-    # TODO  Future upgrade: data from web may not stable,may change to "in" to compare
+    # TODO  Future upgrade: data from web may not stable,may change to in to compare
     basket_page = driver.find_element(By.CSS_SELECTOR,value="a[href='/book/basket']")
     basket_page.click()
     wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR,"button[id='continue-to-payment-btn']")))
@@ -162,7 +173,7 @@ def check_basket_data(wait,driver):
         date_time_text_basket = booking.find_element(By.CSS_SELECTOR,value="div[class='basket-item-booking-datetime']").text
         apart = date_time_text_basket.split()
         basket_data.append(
-            {"court" : court_text_basket.split("/")[0].strip(),
+            {"court" : clean_court_name(court_text_basket.split("/")[0].strip()),
             "location" : court_text_basket.split("/")[1].strip(),
             "start" : apart[4],
             "end" : apart[6],
@@ -175,7 +186,7 @@ def expected_data(TARGET_START_TIME,TARGET_END_TIME,TARGET_COURT_NUMBER,LOCATION
     expect_data_dict = []
     for start,end in zip(TARGET_START_TIME,TARGET_END_TIME):
         expect_data_dict.append(
-            {"court" : f"Tennis Hall Court {TARGET_COURT_NUMBER}",
+            {"court" : f"tennis court {TARGET_COURT_NUMBER}",
             "location" : LOCATION,
             "start" : start,
             "end" : end,
@@ -187,7 +198,7 @@ def expected_data(TARGET_START_TIME,TARGET_END_TIME,TARGET_COURT_NUMBER,LOCATION
 def process_payment(wait,driver,MY_CARD,EXPIRY_DAY,CVV):
     payment_button = driver.find_element(By.CSS_SELECTOR,value="button[id='continue-to-payment-btn']")
     payment_button.click()
-    
+
     iframe = wait.until(EC.presence_of_element_located((By.ID, "hostedfield-frame-1")))
     driver.switch_to.frame(iframe)
     print("--------------------")
@@ -336,38 +347,37 @@ TARGET_DAY = "Sunday"
 TARGET_START_TIME = ["15:00","16:00"]
 TARGET_END_TIME = ["16:00","17:00"]
 LOCATION = "Gorbals"
-TARGET_COURT = "Court 4"
-TARGET_COURT_NUMBER = 4
+TARGET_COURT_NUMBER = [1,4,3,2]                                     
 
 accept_cookies()
 login(wait,driver,MY_EMAIL,MY_PASSWORD)
 provide_filter(wait,driver)
 search_availability(wait,driver)
-
-while TARGET_COURT_NUMBER >=1:
-    # loop for court 4 > 3 > 2 > 1
-    check_court_availability = find_available_slots(get_court_name(TARGET_COURT_NUMBER))
+COURT_NUMBER = None
+space = None
+for target in TARGET_COURT_NUMBER:
+    # loop for court 1 > 4 > 3 > 2
+    check_court_availability = find_available_slots(get_court_name(target))
     if check_court_availability:
-        print(f"=====Adding court {TARGET_COURT_NUMBER} to basket=====")
+        print(f"=====Adding court {target} to basket=====")
         add_court_to_basket(wait,driver,check_court_availability)
+        space = True
+        COURT_NUMBER = target
         break
     else:
-        print(f"=====Court {TARGET_COURT_NUMBER} don't have space=====")
+        print(f"=====Court {target} don't have space=====")
         print(f"=====Trying to book another court=====")    
-        TARGET_COURT_NUMBER -= 1
         
-if TARGET_COURT_NUMBER <= 0:
-    # if all 4 court are full
+if space == None:
     print("All courts are full. Maybe next week")
 else:
-    expectation = expected_data(TARGET_START_TIME,TARGET_END_TIME,TARGET_COURT_NUMBER,LOCATION,CLOSEST_SUNDAY)
+    expectation = expected_data(TARGET_START_TIME,TARGET_END_TIME,COURT_NUMBER,LOCATION,CLOSEST_SUNDAY)
     basket_data = check_basket_data(wait,driver)
     if expectation == basket_data:
         print("=====Data is match=====")
         process_payment(wait,driver,MY_CARD,EXPIRY_DAY,CVV)
         payment_result = wait_for_payment_result(wait,driver)
         results = process_payment_result(driver,payment_result)
-        # what if its 3ds, then can't just use results :, there is one more case to handle
         if results:
             get_summary(results)
         
